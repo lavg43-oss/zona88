@@ -8,7 +8,7 @@ import {
   ComposedChart
 } from 'recharts';
 import { Download, Users, TrendingUp, BookOpen, AlertTriangle } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import clsx from 'clsx';
 
@@ -161,16 +161,16 @@ export default function Dashboard({ user }: { user: any }) {
       const addChartToPdf = async (id: string, heightMargin = 0) => {
         const el = document.getElementById(id);
         if (el) {
-          const canvas = await html2canvas(el, { scale: 2, useCORS: true });
-          const imgData = canvas.toDataURL('image/png', 1.0);
-          const imgHeight = (canvas.height * (pdfWidth - 20)) / canvas.width;
+          const dataUrl = await toPng(el, { pixelRatio: 2 });
+          const imgProps = pdf.getImageProperties(dataUrl);
+          const imgHeight = (imgProps.height * (pdfWidth - 20)) / imgProps.width;
           
           if (currentY + imgHeight > 280) {
             pdf.addPage();
             currentY = 20;
           }
           
-          pdf.addImage(imgData, 'PNG', 10, currentY, pdfWidth - 20, imgHeight);
+          pdf.addImage(dataUrl, 'PNG', 10, currentY, pdfWidth - 20, imgHeight);
           currentY += imgHeight + heightMargin;
         }
       };
