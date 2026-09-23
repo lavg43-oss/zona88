@@ -14,7 +14,6 @@ export default function Capture({ user }: { user: any }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {
     async function loadGroups() {
@@ -39,36 +38,21 @@ export default function Capture({ user }: { user: any }) {
         .eq('group_id', selectedGroup)
         .eq('period', selectedPeriod);
         
-      if (data) {
+        if (data) {
         setDbScores(data);
         const newScores: Record<string, string> = {};
-        let locked = false;
         
         data.forEach(s => {
           newScores[s.discipline] = String(s.average_score);
-          
-          // Check 24 hours rule
-          const created = new Date(s.created_at).getTime();
-          const now = new Date().getTime();
-          const hours = (now - created) / (1000 * 60 * 60);
-          
-          if (hours >= 24) {
-            // Check unlocked_until
-            if (!s.unlocked_until || new Date(s.unlocked_until).getTime() < now) {
-              locked = true;
-            }
-          }
         });
         
         setScores(newScores);
-        setIsLocked(locked);
       }
     }
     loadScores();
   }, [selectedGroup, selectedPeriod]);
 
   const handleScoreChange = (discipline: string, value: string) => {
-    if (isLocked) return;
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setScores(prev => ({ ...prev, [discipline]: value }));
       setSaved(false);
@@ -76,7 +60,6 @@ export default function Capture({ user }: { user: any }) {
   };
 
   const handleSave = async () => {
-    if (isLocked) return;
     setSaving(true);
     
     const upserts = Object.keys(scores).map(discipline => {
@@ -168,25 +151,6 @@ export default function Capture({ user }: { user: any }) {
           </div>
         </div>
 
-        {/* Advertencia 24h */}
-        {isLocked ? (
-          <div className="px-6 py-4 bg-red-50 border-b border-red-100 flex items-start gap-3 text-red-700">
-            <AlertCircle size={20} className="shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-bold">Periodo de edición finalizado</p>
-              <p className="mt-0.5 opacity-90">Han pasado más de 24 horas desde el primer registro. Para modificar datos, solicita autorización a la supervisión.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="px-6 py-4 bg-amber-50 border-b border-amber-100 flex items-start gap-3 text-amber-700">
-            <AlertCircle size={20} className="shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-bold">Importante: Regla de 24 horas</p>
-              <p className="mt-0.5 opacity-90">Una vez guardadas las calificaciones de un grupo, tendrás solo 24 horas para hacer correcciones. Después de ese tiempo, el registro se bloqueará permanentemente.</p>
-            </div>
-          </div>
-        )}
-
         {/* Grid de Captura */}
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
@@ -196,13 +160,11 @@ export default function Capture({ user }: { user: any }) {
             
             <button
               onClick={handleSave}
-              disabled={isLocked || saving}
+              disabled={saving}
               className={clsx(
                 "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm",
                 saved 
                   ? "bg-emerald-500 text-white" 
-                  : isLocked
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
               )}
             >
@@ -226,13 +188,13 @@ export default function Capture({ user }: { user: any }) {
                   <input
                     type="text"
                     inputMode="decimal"
-                    disabled={isLocked}
+                    
                     value={scores[discipline] || ''}
                     onChange={(e) => handleScoreChange(discipline, e.target.value)}
                     placeholder="Ej. 8.5"
                     className={clsx(
                       "w-full bg-white border rounded-lg px-3 py-2 text-slate-800 font-medium outline-none transition-colors",
-                      isLocked ? "border-slate-200 bg-slate-100 cursor-not-allowed text-slate-500" : "border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                      "border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                     )}
                   />
                 </div>
@@ -244,3 +206,6 @@ export default function Capture({ user }: { user: any }) {
     </div>
   );
 }
+
+
+

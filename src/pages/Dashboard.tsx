@@ -188,6 +188,16 @@ export default function Dashboard({ user }: { user: any }) {
     }
   };
 
+  if (!isSupervisor) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center h-full text-slate-500">
+        <AlertTriangle size={48} className="mb-4 text-slate-300" />
+        <h2 className="text-xl font-bold">Acceso Denegado</h2>
+        <p>El panel de resultados es de uso exclusivo para la Supervisión Escolar.</p>
+      </div>
+    );
+  }
+
   if (loading) return <div className="p-8 text-center text-slate-500 font-bold">Cargando datos en vivo...</div>;
 
   return (
