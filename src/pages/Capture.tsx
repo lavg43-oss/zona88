@@ -62,33 +62,52 @@ export default function Capture({ user }: { user: any }) {
   const handleSave = async () => {
     setSaving(true);
     
-    const upserts = Object.keys(scores).map(discipline => {
+    const updates: any[] = [];
+    const inserts: any[] = [];
+
+    Object.keys(scores).forEach(discipline => {
       const val = parseFloat(scores[discipline]);
       const existing = dbScores.find(s => s.discipline === discipline);
       
       if (!isNaN(val)) {
         if (existing) {
-          return { ...existing, average_score: val }; // Update
+          updates.push({ ...existing, average_score: val });
         } else {
-          return {
+          inserts.push({
             group_id: selectedGroup,
             period: selectedPeriod,
             discipline: discipline,
             average_score: val
-          };
+          });
         }
       }
-      return null;
-    }).filter(Boolean);
+    });
 
-    if (upserts.length > 0) {
-      const { error } = await supabase.from('z88_scores').upsert(upserts);
-      if (!error) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-      } else {
-        alert('Error al guardar: ' + error.message);
-      }
+    let hasError = false;
+    let errorMessage = '';
+
+    if (inserts.length > 0) {
+      const { error } = await supabase.from('z88_scores').insert(inserts);
+      if (error) { hasError = true; errorMessage = error.message; }
+    }
+    
+    if (updates.length > 0 && !hasError) {
+      const { error } = await supabase.from('z88_scores').upsert(updates);
+      if (error) { hasError = true; errorMessage = error.message; }
+    }
+
+    if (!hasError) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      
+      const { data } = await supabase
+        .from('z88_scores')
+        .select('*')
+        .eq('group_id', selectedGroup)
+        .eq('period', selectedPeriod);
+      if (data) setDbScores(data);
+    } else {
+      alert('Error al guardar: ' + errorMessage);
     }
     setSaving(false);
   };
